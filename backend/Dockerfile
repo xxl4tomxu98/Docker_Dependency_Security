@@ -1,4 +1,4 @@
-FROM golang:1.19.12-alpine as base
+FROM golang:1.20.10-alpine as base
 RUN apk add --no-cache curl
 RUN apk add --no-cache git ca-certificates openssh-client
 
@@ -15,7 +15,7 @@ RUN --mount=type=cache,target=/root/.cache \
 COPY . ./
 RUN go build -o backend .
 
-FROM alpine:3.18.2
+FROM alpine:3.18.4
 RUN apk add --no-cache ca-certificates
 COPY --from=builder /go/src/backend /backend
 CMD ["/backend"]

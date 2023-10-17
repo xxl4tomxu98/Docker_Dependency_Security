@@ -547,4 +547,82 @@ concerns across all our images.
 
 ### Extra Image
 
-Repeat the above steps for the `$ORG/scout-demo-service-back` image (or any other image you have).
+Repeat the above steps for the `$ORG/scout-demo-service-back` image:
+
+8. From looking through the layers before, we know how to fix that. Let's update the base image
+   in [`backend/Dockerfile`](backend/Dockerfile):
+
+   ```dockerfile
+   FROM alpine:3.18.4
+   ```
+
+9. Now rebuild, incrementing the tag
+
+   ```console
+   ( cd backend && \
+     docker build -t $ORG/scout-demo-service-back:4.1 \
+       --sbom=generator=docker/scout-sbom-indexer \
+       --provenance=mode=max --load . )
+   ```
+
+10. Note we did not push the image in the previous step. Entirely locally, we can see if we have
+   improve policy compliance using the `compare` command we used previously when focusing on
+   fixing vulnerabilities
+
+   ```console
+   docker scout compare $ORG/scout-demo-service-back:4.1 --to $ORG/scout-demo-service-back:4
+   ```
+   ![scout policy compare 0](./ss/policy-compare-0.png)
+   ![scout policy compare 1](./ss/policy-compare-1.png)
+
+   Scrolling past the Overview to the Policies section of the output, you can see you improved
+   two policies without pushing images or running CI.
+
+11. We see from the above command that while we are now compliant with the "All critical
+   vulnerabilities", we are still not in compliance with the "Critical and high
+   vulnerabilities with fixes" policy, there are still one high vulnerabilities. From our first
+   hands-on earlier today, we know how to fix that too. Update the go dependency in
+   [`backend/go.mod`](backend/go.mod) to `require golang.org/x/text v0.3.8` and rebuild the image.
+
+   ```console
+   ( cd backend && \
+     docker build -t $ORG/scout-demo-service-back:4.2 \
+       --sbom=generator=docker/scout-sbom-indexer \
+       --provenance=mode=max --load . )
+   ```
+
+12. Run the `compare` command again to see if we are fully compliant
+
+   ```console
+   docker scout compare $ORG/scout-demo-service-back:4.2 --to $ORG/scout-demo-service-back:4.1
+   ```
+
+13. We see from the above command that while we are now compliant with the "All critical
+   vulnerabilities", we are still not in compliance with the "Critical and high
+   vulnerabilities with fixes" policy, there are still one high vulnerabilities. From our first
+   hands-on earlier today, we know how to fix that too. Update the base go image version in
+   [`backend/Dockerfile`](backend/Dockerfile) to `FROM golang:1.20.10-alpine as base` and 
+   `go 1.20` in [`backend/go.mod`](backend/go.mod) and rebuild the image.
+
+   ```console
+   ( cd backend && \
+     docker build -t $ORG/scout-demo-service-back:4.3 \
+       --sbom=generator=docker/scout-sbom-indexer \
+       --provenance=mode=max --load . )
+   ```
+
+14. Run the `compare` command again to see if we are fully compliant
+
+   ```console
+   docker scout compare $ORG/scout-demo-service-back:4.3 --to $ORG/scout-demo-service-back:4.2
+   ```
+
+15. That did the trick, so push the image
+
+   ```console
+   docker push $ORG/scout-demo-service-back:4.3
+   ```
+
+16. Go to https://scout.docker.com
+
+   ![scout policy web fix](./ss/policy-fix.png)
